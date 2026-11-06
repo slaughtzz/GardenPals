@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Garden Agent</title>
+
+<style>
+:root{
+ --bg:#080c0b; --bg2:#0d1211; --panel:rgba(20,28,25,.72); --glass:rgba(255,255,255,.045);
+ --line:rgba(255,255,255,.075); --line2:rgba(255,255,255,.13);
+ --tx:#eef4f0; --mut:#7e948a; --g:#5eead4; --g2:#34d399; --b:#818cf8; --y:#fcd34d; --r:#fb7185; --p:#e879f9;
+ --sh:0 1px 0 rgba(255,255,255,.05) inset, 0 18px 40px -24px rgba(0,0,0,.9);
+ --r1:18px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--tx);
+ font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+ font-feature-settings:"cv11","ss01";-webkit-font-smoothing:antialiased;
+ background-image:
+  radial-gradient(900px 520px at 12% -8%, rgba(94,234,212,.10), transparent 60%),
+  radial-gradient(760px 480px at 92% 0%, rgba(129,140,248,.09), transparent 62%),
+  radial-gradient(800px 600px at 50% 120%, rgba(52,211,153,.06), transparent 60%);
+ background-attachment:fixed}
+::selection{background:rgba(94,234,212,.25)}
+/* ---------- top bar ---------- */
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+ padding:12px 22px;background:rgba(8,12,11,.72);backdrop-filter:blur(18px) saturate(1.4);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:9px;font-weight:650;font-size:16px;letter-spacing:-.02em;margin-right:6px}
+.brand .mk{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;font-size:14px;
+ background:linear-gradient(150deg,var(--g),var(--g2));box-shadow:0 6px 18px -6px rgba(94,234,212,.6)}
+.brand em{font-style:normal;background:linear-gradient(90deg,var(--g),var(--b));-webkit-background-clip:text;background-clip:text;color:transparent}
+.spacer{flex:1}
+.chip{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--mut);
+ background:var(--glass);border:1px solid var(--line);padding:6px 11px;border-radius:999px;white-space:nowrap}
+.chip b{color:var(--tx);font-weight:600}
+.chip .ico{font-size:13px;opacity:.85}
+.live{width:7px;height:7px;border-radius:50%;background:var(--r);box-shadow:0 0 0 3px rgba(251,113,133,.15)}
+.live.on{background:var(--g);box-shadow:0 0 0 3px rgba(94,234,212,.18),0 0 12px var(--g);animation:pulse 2.4s infinite}
+@keyframes pulse{50%{opacity:.55}}
+button{font:inherit;cursor:pointer;transition:.18s ease}
+.btn{background:var(--glass);color:var(--tx);border:1px solid var(--line2);border-radius:11px;padding:8px 14px;font-size:13px;font-weight:500}
+.btn:hover{background:rgba(255,255,255,.09);transform:translateY(-1px)}
+.btn:active{transform:none}
+.btn.pri{background:linear-gradient(150deg,var(--g),var(--g2));color:#04211b;border-color:transparent;font-weight:650;
+ box-shadow:0 10px 24px -12px rgba(94,234,212,.7)}
+.btn.pri:hover{box-shadow:0 14px 30px -12px rgba(94,234,212,.85)}
+.btn.ghost{background:transparent;border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--r);color:var(--r)}
+.btn.mini{padding:5px 10px;font-size:11.5px;border-radius:9px}
+/* ---------- layout ---------- */
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:18px;padding:18px 22px 40px;max-width:1460px;margin:0 auto;align-items:start}
+@media(max-width:1060px){.wrap{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r1);padding:18px 20px;margin-bottom:18px;
+ backdrop-filter:blur(14px);box-shadow:var(--sh)}
+.card h3{margin:0;font-size:13.5px;font-weight:620;letter-spacing:.01em}
+.card .hd{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.sub{color:var(--mut);font-size:12.5px;line-height:1.55;margin:0}
+/* ---------- agent ---------- */
+.agent{background:linear-gradient(160deg,rgba(94,234,212,.07),rgba(129,140,248,.05) 55%,transparent),var(--panel);
+ border-color:rgba(94,234,212,.16);position:relative;overflow:hidden}
+.agent:before{content:"";position:absolute;inset:0;background:radial-gradient(400px 160px at 8% 0%,rgba(94,234,212,.12),transparent 70%);pointer-events:none}
+.badge{font-size:10.5px;font-weight:650;letter-spacing:.03em;text-transform:uppercase;
+ padding:4px 10px;border-radius:999px;border:1px solid transparent}
+.badge.ai{background:rgba(232,121,249,.14);color:var(--p);border-color:rgba(232,121,249,.25)}
+.badge.rules{background:rgba(252,211,77,.12);color:var(--y);border-color:rgba(252,211,77,.22)}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:16px 0 15px;position:relative}
+.step{border:1px solid var(--line);border-radius:13px;padding:11px 6px;text-align:center;font-size:11px;color:var(--mut);
+ background:rgba(255,255,255,.02);transition:.3s cubic-bezier(.4,0,.2,1)}
+.step .ic{font-size:19px;display:block;margin-bottom:4px;filter:grayscale(1);opacity:.45;transition:.3s}
+.step.on{border-color:rgba(94,234,212,.5);color:var(--tx);background:rgba(94,234,212,.09);
+ box-shadow:0 0 0 1px rgba(94,234,212,.15),0 12px 30px -18px rgba(94,234,212,.8);transform:translateY(-2px)}
+.step.on .ic{filter:none;opacity:1;transform:scale(1.16)}
+.brief{font-size:16.5px;line-height:1.5;margin:0;font-weight:450;letter-spacing:-.01em}
+.thought{font-size:12.5px;color:var(--mut);font-style:italic;margin:7px 0 0;padding-left:11px;border-left:2px solid rgba(94,234,212,.35)}
+/* ---------- beds ---------- */
+.beds{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:11px}
+@media(max-width:640px){.beds{grid-template-columns:repeat(2,1fr)}}
+.bed{position:relative;border:1px solid var(--line);border-radius:15px;padding:12px 10px 10px;text-align:center;font-size:11.5px;
+ background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.012));transition:.22s;min-height:172px;
+ display:flex;flex-direction:column;align-items:center}
+.bed:hover{border-color:var(--line2);transform:translateY(-2px)}
+.bed.empty{border-style:dashed;border-color:rgba(255,255,255,.14);color:var(--mut);cursor:pointer;justify-content:center}
+.bed.empty:hover{border-color:var(--g);color:var(--g);background:rgba(94,234,212,.06)}
+.bed.thirsty{border-color:rgba(252,211,77,.42)}
+.bed.pest{border-color:rgba(251,113,133,.55);background:linear-gradient(180deg,rgba(251,113,133,.09),transparent)}
+.bed.ripe{border-color:rgba(94,234,212,.5);box-shadow:0 0 0 1px rgba(94,234,212,.12)}
+.bed.dead{opacity:.32;filter:saturate(.3)}
+.bed .em{font-size:33px;line-height:1;margin:2px 0 5px;filter:drop-shadow(0 4px 10px rgba(0,0,0,.5))}
+.bed .nm{font-weight:600;letter-spacing:-.01em}
+.bed .tag{position:absolute;top:7px;right:9px;font-size:14px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))}
+.m{display:flex;align-items:center;gap:6px;margin:3px 0;font-size:9.5px;color:var(--mut);width:100%;text-transform:uppercase;letter-spacing:.05em}
+.m i{font-style:normal;width:38px;text-align:left}
+.m .track{flex:1;height:4px;background:rgba(255,255,255,.08);border-radius:9px;overflow:hidden}
+.m .track>span{display:block;height:100%;border-radius:9px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.w{background:linear-gradient(90deg,#60a5fa,#818cf8)}.gr{background:linear-gradient(90deg,var(--g2),var(--g))}.hp{background:linear-gradient(90deg,#f43f5e,var(--r))}
+.bed .meta{font-size:9.5px;color:var(--mut);margin-top:4px;letter-spacing:.02em}
+.bed .acts{display:flex;gap:5px;margin-top:7px}
+.bed .acts .btn{padding:4px 8px;font-size:12px}
+/* ---------- tasks ---------- */
+.task{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--line);font-size:13px}
+.task:last-child{border-bottom:0;padding-bottom:0}
+.pill{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 6px;border-radius:6px;
+ background:rgba(255,255,255,.07);color:var(--mut);margin-top:2px;white-space:nowrap}
+.pill.done{background:rgba(94,234,212,.14);color:var(--g)}
+.pill.failed{background:rgba(251,113,133,.14);color:var(--r)}
+.pill.approval{background:rgba(252,211,77,.16);color:var(--y);animation:blink 2s infinite}
+@keyframes blink{50%{opacity:.6}}
+.pill.noop{opacity:.55}
+.task .t{flex:1;min-width:0}.task small{display:block;color:var(--mut);margin-top:3px;line-height:1.45}
+.ai-tag{font-size:9.5px;color:var(--p);letter-spacing:.04em}
+/* ---------- controls ---------- */
+label{display:block;font-size:12px;color:var(--mut);margin:15px 0 7px;letter-spacing:.01em}
+label b{color:var(--tx);float:right;font-weight:600;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;-webkit-appearance:none;height:5px;border-radius:9px;background:rgba(255,255,255,.1);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+ background:linear-gradient(150deg,var(--g),var(--g2));cursor:pointer;box-shadow:0 3px 10px rgba(94,234,212,.5),0 0 0 3px rgba(8,12,11,.9)}
+select,input[type=text]{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line2);color:var(--tx);
+ border-radius:11px;padding:9px 11px;font:inherit;font-size:13px;outline:none}
+select:focus,input[type=text]:focus{border-color:rgba(94,234,212,.5);background:rgba(94,234,212,.05)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.seg .btn{padding:9px 4px;font-size:11.5px;text-align:center}
+.seg .btn.sel{background:linear-gradient(150deg,var(--g),var(--g2));color:#04211b;border-color:transparent;font-weight:650;
+ box-shadow:0 10px 26px -14px rgba(94,234,212,.8)}
+/* ---------- misc ---------- */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip-s{background:rgba(255,255,255,.055);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:11.5px;color:var(--tx)}
+#log{max-height:230px;overflow:auto;font:11.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--mut);scrollbar-width:thin}
+#log div{padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+#log::-webkit-scrollbar{width:6px}#log::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:9px}
+.k-observe{color:#93c5fd}.k-think{color:var(--y)}.k-act{color:var(--g)}.k-reflect{color:var(--p)}.k-learn{color:#fda4af}
+canvas{width:100%;height:82px;display:block}
+details{font-size:12.5px;color:var(--mut);line-height:1.65}
+summary{cursor:pointer;color:var(--tx);font-weight:620;font-size:13.5px;list-style:none;display:flex;align-items:center;gap:8px}
+summary::-webkit-details-marker{display:none}
+summary:before{content:"›";display:inline-block;transition:.2s;color:var(--g);font-size:17px;line-height:1}
+details[open] summary:before{transform:rotate(90deg)}
+details ol{padding-left:20px;margin:12px 0 0}
+details li{margin:6px 0}details b{color:var(--tx);font-weight:620}
+.divider{height:1px;background:var(--line);margin:14px 0}
+.fade{animation:up .45s cubic-bezier(.2,.8,.2,1)}
+@keyframes up{from{opacity:0;transform:translateY(6px)}}
+.empty-note{padding:14px 0;color:var(--mut);font-size:12.5px}
+/* ---------- buddy ---------- */
+.buddy{display:flex;gap:16px;align-items:flex-start}
+.bwrap{position:relative;width:104px;height:104px;flex:0 0 104px;display:grid;place-items:center}
+.bring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(94,234,212,.22);
+ background:radial-gradient(circle at 50% 40%,rgba(94,234,212,.16),transparent 68%)}
+.bring:after{content:"";position:absolute;inset:-7px;border-radius:50%;border:1px dashed rgba(255,255,255,.12);animation:spin 26s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.bface{position:relative;font-size:46px;line-height:1;filter:drop-shadow(0 6px 16px rgba(0,0,0,.55));transition:.3s}
+.bwrap.alert .bring{border-color:rgba(251,113,133,.5);background:radial-gradient(circle at 50% 40%,rgba(251,113,133,.2),transparent 68%)}
+.bwrap.busy .bring{border-color:rgba(252,211,77,.45);background:radial-gradient(circle at 50% 40%,rgba(252,211,77,.16),transparent 68%)}
+.bwrap.worried .bring{border-color:rgba(232,121,249,.45);background:radial-gradient(circle at 50% 40%,rgba(232,121,249,.16),transparent 68%)}
+.bwrap.alert .bface{animation:shake .5s infinite}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px) rotate(-3deg)}75%{transform:translateX(2px) rotate(3deg)}}
+.bwrap.calm .bface{animation:bob 3.4s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-5px)}}
+.bubble{position:relative;flex:1;background:rgba(255,255,255,.05);border:1px solid var(--line2);
+ border-radius:14px;padding:12px 14px;font-size:13.5px;line-height:1.55;min-width:0}
+.bubble:before{content:"";position:absolute;left:-7px;top:22px;width:12px;height:12px;background:rgba(255,255,255,.05);
+ border-left:1px solid var(--line2);border-bottom:1px solid var(--line2);transform:rotate(45deg)}
+.bname{font-size:11px;color:var(--g);letter-spacing:.08em;text-transform:uppercase;font-weight:700;margin-bottom:5px}
+.bsay{color:var(--tx)}
+.bstat{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px;margin-top:14px}
+.bcell{background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:12px;padding:9px 10px}
+.bcell .k{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.bcell .v{font-size:16px;font-weight:620;margin-top:3px;font-variant-numeric:tabular-nums}
+.bcell .v small{font-size:10.5px;color:var(--mut);font-weight:500}
+.mood{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12.5px}
+.mood:last-child{border-bottom:0}
+.mood .f{font-size:17px}.mood .l{flex:1;min-width:0}.mood .l b{display:block;font-weight:600;font-size:12.5px}
+.mood .l span{color:var(--mut);font-size:11.5px;display:block;margin-top:1px}
+.mood .fx{font-size:11px;color:var(--g2);margin-top:3px}
+.tabs{display:flex;gap:6px;margin:14px 0 4px}
+.tabs .btn{flex:1;padding:6px 8px;font-size:11.5px}
+.tabs .btn.sel{background:rgba(94,234,212,.14);border-color:rgba(94,234,212,.4);color:var(--tx)}
+.bwatch{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:11px;margin-top:8px;font-size:12px;
+ background:rgba(251,113,133,.08);border:1px solid rgba(251,113,133,.22)}
+.bwatch .fx{color:var(--mut)}
+</style></head><body>
+<div class="top">
+ <div class="brand"><span class="mk">🌱</span>Garden<em>Agent</em></div>
+ <span class="chip"><span class="live" id="dot"></span><span id="conn">connecting</span></span>
+ <span class="chip"><span class="ico">📅</span>Day <b id="day">1</b></span>
+ <span class="chip"><span class="ico">🗓️</span><b id="month">April</b></span>
+ <span class="chip"><span class="ico" id="wxIco">☀️</span><b id="weather">—</b></span>
+ <span class="chip"><span class="ico">💧</span><b id="tank">0</b> L</span>
+ <span class="chip"><span class="ico">🧴</span><b id="spray">0</b></span>
+ <span class="chip"><span class="ico">🧪</span><b id="feed">0</b></span>
+ <span class="chip"><span class="ico">🧺</span><b id="harv">0</b></span>
+ <span class="spacer"></span>
+ <button class="btn" id="runBtn">Pause</button>
+ <button class="btn pri" onclick="post('tick')">Next day ▶</button>
+ <button class="btn ghost" onclick="confirm('Reset the garden and everything the agent learned?')&&post('reset')">Reset</button>
+</div>
+<div class="wrap">
+<main>
+ <div class="card buddy-card fade" id="buddyCard">
+  <div class="buddy">
+   <div class="bwrap calm" id="bwrap"><div class="bring"></div><div class="bface" id="bface">🌱</div></div>
+   <div class="bubble">
+    <div class="bname">Sprout · your garden buddy</div>
+    <div class="bsay" id="bsay">Waking up…</div>
+    <div id="bwatch"></div>
+   </div>
+  </div>
+  <div class="bstat" id="bstat"></div>
+  <div class="tabs" id="btabs">
+   <button class="btn sel" data-t="moods">Plants</button>
+   <button class="btn" data-t="jobs">Jobs</button>
+   <button class="btn" data-t="know">Know-how</button></div>
+  <div id="bpanel"></div>
+ </div>
+ <div class="card agent fade">
+  <div class="hd"><h3>🧠 The agent</h3><span class="spacer" style="flex:1"></span><span class="badge" id="brain"></span></div>
+  <div class="steps" id="steps"></div>
+  <p class="brief" id="brief">Waking up…</p><p class="thought" id="thought"></p>
+ </div>
+
+ <div class="card fade"><div class="hd"><h3>🌿 Your garden</h3></div>
+  <p class="sub" style="margin-bottom:12px">Pick a seed, click an empty bed. The agent tends everything else itself.</p>
+  <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+   <div style="flex:0 0 236px">
+    <select id="seed"></select>
+    <p class="sub" id="seedInfo" style="margin-top:9px"></p>
+    <button class="btn mini" style="margin-top:9px" onclick="advice()">Ask the agent for advice 🌿</button>
+   </div>
+   <div style="flex:1;min-width:280px"><div class="beds" id="beds"></div></div>
+  </div>
+ </div>
+
+ <div class="card fade"><div class="hd"><h3>📋 What the agent decided</h3></div>
+  <p class="sub" style="margin-bottom:6px">Every action, and why it chose it.</p><div id="tasks"></div></div>
+
+ <div class="card fade"><div class="hd"><h3>📈 Score over time</h3></div>
+  <canvas id="chart" width="880" height="82"></canvas>
+  <div class="chips" style="margin-top:10px">
+   <span class="chip-s">Score <b id="score">0</b></span>
+   <span class="chip-s">Water wasted <b id="waste">0</b></span>
+   <span class="chip-s">Plants lost <b id="lost">0</b></span>
+   <span class="chip-s">Harvested <b id="harv2">0</b></span>
+  </div></div>
+</main>
+<aside>
+ <div class="card fade"><details open><summary>How the AI works</summary>
+  <p style="margin-top:10px">The agent runs by itself, every game day. Each round it does four things:</p>
+  <ol><li><b>Observe</b> — checks every plant: water, health, pests, ripeness, season and tomorrow's weather.</li>
+  <li><b>Think</b> — decides what to do. With a key, a real AI model reads the garden and writes the plan. Without one, built-in gardening rules decide.</li>
+  <li><b>Act</b> — uses its tools only: water, feed, shade, spray, harvest, clear, refill, plant.</li>
+  <li><b>Learn</b> — if a plant wilts, it remembers to water that kind earlier next time.</li></ol>
+  <p style="margin-top:10px">The <b>autonomy</b> setting decides what it may do without asking you.</p></details></div>
+
+ <div class="card fade"><div class="hd"><h3>🎛️ Mission control</h3></div>
+  <label>Freedom</label>
+  <div class="seg" id="seg">
+   <button class="btn" data-v="watch">Suggest</button>
+   <button class="btn" data-v="ask">Ask first</button>
+   <button class="btn" data-v="auto">Full auto</button></div>
+  <p class="sub" id="autoHelp" style="margin-top:9px"></p>
+  <div class="divider"></div>
+  <label>Save water <span style="opacity:.5">⟷</span> Pamper plants <b id="v1">40</b></label>
+  <input type="range" id="gSave" min="0" max="100">
+  <label>Variety <span style="opacity:.5">⟷</span> Max harvest <b id="v2">50</b></label>
+  <input type="range" id="gYield" min="0" max="100">
+  <label>Seconds per day <b id="v3">6s</b></label>
+  <input type="range" id="speed" min="2" max="15">
+  <label>Standing order</label>
+  <input type="text" id="order" placeholder='e.g. never harvest lettuce'>
+ </div>
+
+ <div class="card fade"><div class="hd"><h3>📖 Plant guide</h3></div>
+  <p class="sub" id="nowMonth" style="margin-bottom:10px"></p><div id="guide"></div></div>
+
+ <div class="card fade" id="adviceCard" style="display:none"><div class="hd"><h3>💬 The agent's advice</h3></div>
+  <p class="sub" id="adviceTxt" style="white-space:pre-wrap"></p></div>
+
+ <div class="card fade"><div class="hd"><h3>🎓 What it has learned</h3></div>
+  <p class="sub" style="margin-bottom:9px">Raises a plant's watering trigger after it wilts.</p>
+  <div class="chips" id="thr"></div><p class="sub" id="lessons" style="margin-top:9px"></p></div>
+
+ <div class="card fade"><div class="hd"><h3>🧾 Thought log</h3></div><div id="log"></div></div>
+</aside>
+</div>
+<script>
+const $=id=>document.getElementById(id);let S=null,editing=false;
+const post=(p,b={})=>fetch("/api/"+p,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)});
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const EM={tomato:"🍅",lettuce:"🥬",cactus:"🌵",sunflower:"🌻",basil:"🌿",carrot:"🥕",cucumber:"🥒",pea:"🫛",mint:"🌱"};
+const PH=[["observe","👀","Observe"],["think","💭","Think"],["act","🛠️","Act"],["learn","📚","Learn"]];
+const HELP={watch:"Only suggestions — you approve every action.",ask:"Routine care is automatic; harvesting, clearing and planting wait for you.",auto:"It does everything by itself."};
+const WXI={"Sunny":"☀️","Cloudy":"⛅","Rainy":"🌧️","Hot":"🔥"};
+const es=new EventSource("/api/events");
+es.onopen=()=>{$("conn").textContent="live";$("dot").className="live on"};
+es.onerror=()=>{$("conn").textContent="reconnecting";$("dot").className="live"};
+es.onmessage=e=>{S=JSON.parse(e.data);render()};
+function seedOptions(){const now=S.sowNow||[];
+ $("seed").innerHTML=now.map(t=>`<option value="${t}">${EM[t]} ${t} — in season</option>`).join("")+
+  Object.keys(S.species).filter(t=>!now.includes(t)).map(t=>`<option value="${t}">${EM[t]} ${t} — out of season (${S.species[t].months.map(m=>S.months[m-1].slice(0,3)).join(", ")})</option>`).join("")}
+$("seed").onchange=seedInfo;
+function seedInfo(){const t=$("seed").value,sp=S&&S.species[t];if(!sp)return;
+ $("seedInfo").innerHTML=`<b style="color:var(--tx)">${EM[t]} ${t}</b><br>Sow in ${sp.months.map(m=>S.months[m-1]).join(", ")}<br>
+ ☀️ ${sp.sun} sun · 🪴 ${sp.soil}<br>↔️ ${sp.spacing} · 🧪 feed ~${sp.feed}d<br>
+ 💧 ${sp.thirst<8?"very low":sp.thirst<13?"moderate":"high"} · ⏳ ripe in ~${sp.grow}d<br><i style="color:var(--g2)">${sp.tip}</i>`}
+let shown=false;
+function render(){if(!S)return;const s=S.settings,a=S.agent;
+ if(!shown){seedOptions();shown=true}
+ $("day").textContent=S.day;$("month").textContent=S.month;
+ $("weather").textContent=`${S.wx.n} → ${S.fc.n}`;$("wxIco").textContent=WXI[S.wx.n]||"☀️";
+ $("tank").textContent=S.tank;$("spray").textContent=S.spray;$("feed").textContent=S.feed??0;
+ $("harv").textContent=S.harv;$("harv2").textContent=S.harv;
+ $("score").textContent=Math.round(S.score);$("waste").textContent=S.waste;$("lost").textContent=S.lost;
+ $("runBtn").textContent=s.paused?"▶ Resume":"⏸ Pause";
+ const ai=S.llm&&a.brain==="ai";
+ $("brain").className="badge "+(ai?"ai":"rules");
+ $("brain").textContent=ai?`AI · ${S.model}`:(S.llm?"AI offline · rules":"Rules · add a key for AI");
+ $("steps").innerHTML=PH.map(([k,i,n])=>`<div class="step ${a.phase===k?"on":""}"><span class="ic">${i}</span>${n}</div>`).join("");
+ $("brief").textContent=a.phase!=="idle"?{observe:"Looking at the garden…",think:"Deciding what to do…",act:"Doing the work…",learn:"Reviewing what happened…"}[a.phase]:(a.briefing||"Waiting for the first day…");
+ $("thought").textContent=a.phase==="idle"&&a.thought?"“"+a.thought+"”":"";
+ document.querySelectorAll("#seg .btn").forEach(b=>b.classList.toggle("sel",b.dataset.v===s.autonomy));
+ $("autoHelp").textContent=HELP[s.autonomy];
+ [["gSave","v1",""],["gYield","v2",""],["speed","v3","s"]].forEach(([k,v,sfx])=>{
+  if(document.activeElement.id!==k){$(k).value=s[k];$(v).textContent=s[k]+sfx}});
+ if(!editing)$("order").value=s.order;
+ $("beds").innerHTML=S.slots.map((p,i)=>{
+  if(!p)return`<div class="bed empty" onclick="post('plant',{slot:${i},type:$('seed').value})"><span style="font-size:22px">＋</span><div style="margin-top:5px">Bed ${i+1}</div></div>`;
+  const sp=S.species[p.type],thirsty=p.alive&&p.water<p.thr,ripe=p.alive&&p.growth>=sp.grow;
+  const cls=!p.alive?"dead":p.pest?"pest":ripe?"ripe":thirsty?"thirsty":"";
+  const tag=!p.alive?"":p.pest?"🐛":ripe?"✨":thirsty?"💧":"";
+  return`<div class="bed ${cls}"><span class="tag">${tag}</span>
+  <span class="em">${p.alive?EM[p.type]:"🥀"}</span><div class="nm">${p.type} <span style="color:var(--mut);font-weight:400">#${p.id}</span></div>
+  <div class="m"><i>water</i><span class="track"><span class="w" style="width:${p.water}%"></span></span></div>
+  <div class="m"><i>growth</i><span class="track"><span class="gr" style="width:${Math.min(100,p.growth/sp.grow*100)}%"></span></span></div>
+  <div class="m"><i>health</i><span class="track"><span class="hp" style="width:${Math.max(0,p.health)}%"></span></span></div>
+  <div class="meta">${p.inSeason?"in season":"⚠ off-season"} · fed ${p.ageDays-p.daysSinceFeed}d ago</div>
+  <div class="acts"><button class="btn mini" title="Water" onclick="post('water',{id:${p.id}})">💧</button>
+  <button class="btn mini" title="Feed" onclick="post('feed',{id:${p.id}})">🧪</button>${p.heatStressed?`<button class="btn mini" title="Shade" onclick="post('shade',{id:${p.id}})">⛱️</button>`:""}</div></div>`}).join("");
+ const T=S.tasks.slice(-12).reverse();
+ $("tasks").innerHTML=T.map(t=>`<div class="task"><span class="pill ${t.tool==="noop"?"noop ":""}${t.status}">${t.status==="approval"?"needs you":t.status}</span>
+  <div class="t"><b>${esc(t.tool)}</b> ${t.src==="ai"?'<span class="ai-tag">✦ AI</span>':""}<small>${esc(t.why)}${t.result?" → "+esc(t.result):""}</small></div>
+  ${t.status==="approval"?`<div style="display:flex;gap:6px"><button class="btn pri mini" onclick="post('approve',{id:${t.id}})">Approve</button><button class="btn mini" onclick="post('reject',{id:${t.id}})">Reject</button></div>`:""}</div>`).join("")||'<div class="empty-note">Nothing yet — the first plan lands in a few seconds.</div>';
+ $("thr").innerHTML=S.slots.filter(p=>p).map(p=>`<span class="chip-s">${EM[p.type]} ${p.thr}%</span>`).join("")||'<span class="sub">No plants yet.</span>';
+ $("lessons").innerHTML=(S.mem.lessons.slice(0,4).map(l=>"• "+esc(l)).join("<br>")||"No lessons yet.")+`<br><span style="opacity:.7">Rain skips: ${S.mem.skip}</span>`;
+ $("log").innerHTML=S.log.map(l=>`<div class="k-${l.k}"><span style="opacity:.5">d${l.day}</span> ${esc(l.m)}</div>`).join("");
+ guide();seedInfo();buddy();chart()}
+let BTAB="moods";
+document.querySelectorAll("#btabs .btn").forEach(b=>b.onclick=()=>{BTAB=b.dataset.t;
+ document.querySelectorAll("#btabs .btn").forEach(x=>x.classList.toggle("sel",x===b));buddyPanel()});
+const FACE={calm:"😊",busy:"🙂",alert:"😟",worried:"😰"};
+function buddy(){
+ const B=S.buddy;if(!B)return;
+ $("bwrap").className="bwrap "+(FACE[B.state]?B.state:"calm");
+ $("bface").textContent=FACE[B.state]||"🌱";
+ $("bsay").textContent=B.headline;
+ $("bwatch").innerHTML=(B.watch||[]).map(w=>`<div class="bwatch"><b>${w.face}</b><div>${esc(w.line)}<div class="fx">${esc(w.fix)}</div></div></div>`).join("");
+ const s=B.sum;
+ $("bstat").innerHTML=[
+  ["plants",s.plants,""],["avg water",s.avgWater,"%"],["avg health",s.avgHealth,"%"],
+  ["ripe",s.ripe,""],["thirsty",s.thirsty,""],["pests",s.pests,""],
+  ["empty beds",s.emptyBeds,""],["water",s.tank," L"],["spray",s.spray,""],["fertiliser",s.feed,""]
+ ].map(([k,v,u])=>`<div class="bcell"><div class="k">${k}</div><div class="v">${v}<small>${u}</small></div></div>`).join("");
+ buddyPanel()}
+function buddyPanel(){
+ const B=S.buddy;if(!B)return;
+ if(BTAB==="moods"){
+  const list=S.slots.filter(p=>p).map(p=>{const m=(B.moods||[]).find(x=>x.id===p.id)||{face:"🌱",label:"",line:p.type+" #"+p.id,fix:""};
+   return`<div class="mood"><span class="f">${m.face}</span><div class="l"><b>${p.type} #${p.id} — ${m.label}</b>
+   <span>${m.line}</span><div class="fx">${esc(m.fix)}</div></div></div>`}).join("");
+  $("bpanel").innerHTML=list||'<div class="empty-note">No plants yet. Sow one and I will watch it for you.</div>'}
+ else if(BTAB==="jobs"){
+  const jobs=[];const s=B.sum;
+  if(s.pests)jobs.push(["🐛",`Spray ${s.pests} plant${s.pests>1?"s":""}`, "Pests drain health every single day."]);
+  if(s.thirsty)jobs.push(["💧",`Water ${s.thirsty} plant${s.thirsty>1?"s":""}`,"They're below their own comfortable level."]);
+  if(s.hungry)jobs.push(["🧪",`Feed ${s.hungry} plant${s.hungry>1?"s":""}`,"Feeding roughly every 2-3 weeks keeps growth up."]);
+  if(s.tank<=8)jobs.push(["🚰","Top up the water tank",`Only ${s.tank} L left.`]);
+  if(s.spray<=1)jobs.push(["🧴","Restock the pest spray","Nearly empty — pests get worse unchecked."]);
+  if(s.emptyBeds)jobs.push(["🌱",`Sow in ${s.emptyBeds} empty bed${s.emptyBeds>1?"s":""}`,`${s.month} suits: ${(B.inSeason||[]).slice(0,4).join(", ")}.`]);
+  if(!jobs.length)jobs.push(["✅","Nothing to do","Everything's in good shape today."]);
+  $("bpanel").innerHTML=jobs.map(([f,t,fx])=>`<div class="mood"><span class="f">${f}</span><div class="l"><b>${t}</b><div class="fx">${esc(fx)}</div></div></div>`).join("")}
+ else {
+  const now=B.inSeason||[];
+  $("bpanel").innerHTML=`<p class="sub" style="margin:8px 0 10px">It's <b style="color:var(--tx)">${B.sum.month}</b>. These ${now.length} plants suit this month — tap one in the guide below for how to grow it.</p>`+
+   now.map(t=>{const sp=S.species[t];
+   return`<div class="mood"><span class="f">${EM[t]}</span><div class="l"><b>${t}</b><span>${sp.sun} sun · ${sp.soil} · spacing ${sp.spacing}</span>
+   <div class="fx">${esc(sp.tip)}</div></div></div>`}).join("")}}
+function guide(){const now=S.sowNow||[];
+ $("nowMonth").textContent=`It's ${S.month} — ${now.length} of ${Object.keys(S.species).length} plants suit this month.`;
+ $("guide").innerHTML=now.map(t=>{const sp=S.species[t];
+  return`<div style="padding:9px 0;border-bottom:1px solid var(--line)"><b>${EM[t]} ${t}</b>
+  <span style="color:var(--mut);font-size:11px;display:block;margin:2px 0 3px">${sp.sun} sun · ${sp.soil} · ${sp.spacing}</span>
+  <span class="sub">${sp.tip}</span></div>`}).join("")}
+function advice(){const rows=[];
+ S.slots.forEach(p=>{if(!p||!p.alive)return;const sp=S.species[p.type];
+  rows.push(`${EM[p.type]} ${p.type} #${p.id} — ${sp.sun} sun, ${sp.soil}, spacing ${sp.spacing}, feed ~every ${sp.feed} days.${p.inSeason?"":" Out of season: growth will stall."} ${sp.tip}`)});
+ S.slots.forEach((p,i)=>{if(!p)rows.push(`Bed ${i+1} is empty — in ${S.month} you could sow ${(S.sowNow||[]).slice(0,4).map(t=>EM[t]+" "+t).join(", ")}.`)});
+ $("adviceTxt").textContent=rows.join("\n\n")||"Nothing planted yet.";$("adviceCard").style.display="";$("adviceCard").classList.add("fade")}
+function chart(){const c=$("chart"),dpr=devicePixelRatio||1;const w=c.clientWidth,h=82;
+ if(c.width!==w*dpr){c.width=w*dpr;c.height=h*dpr}
+ const g=c.getContext("2d");g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,w,h);
+ const d=S.hist;if(d.length<2){g.fillStyle="rgba(255,255,255,.12)";g.font="12px Inter,sans-serif";g.fillText("Not enough history yet",10,44);return}
+ const mn=Math.min(...d),mx=Math.max(...d,mn+1),X=i=>i/(d.length-1)*w,Y=v=>h-8-(v-mn)/(mx-mn)*(h-20);
+ const gr=g.createLinearGradient(0,0,0,h);gr.addColorStop(0,"rgba(94,234,212,.35)");gr.addColorStop(1,"rgba(94,234,212,0)");
+ g.beginPath();d.forEach((v,i)=>{const x=X(i),y=Y(v);i?g.lineTo(x,y):g.moveTo(x,y)});
+ g.strokeStyle="#5eead4";g.lineWidth=2;g.lineJoin="round";g.shadowColor="rgba(94,234,212,.55)";g.shadowBlur=9;g.stroke();g.shadowBlur=0;
+ g.lineTo(w,h);g.lineTo(0,h);g.fillStyle=gr;g.fill();
+ const lx=X(d.length-1),ly=Y(d[d.length-1]);g.beginPath();g.arc(lx,ly,3.2,0,7);g.fillStyle="#5eead4";g.fill()}
+addEventListener("resize",()=>S&&chart());
+const send=()=>post("settings",{gSave:+$("gSave").value,gYield:+$("gYield").value,speed:+$("speed").value,order:$("order").value});
+["gSave","gYield","speed"].forEach(i=>{$(i).onchange=send;$(i).oninput=()=>$({gSave:"v1",gYield:"v2",speed:"v3"}[i]).textContent=$(i).value+(i==="speed"?"s":"")});
+$("order").onchange=send;$("order").onfocus=()=>editing=true;$("order").onblur=()=>editing=false;
+document.querySelectorAll("#seg .btn").forEach(b=>b.onclick=()=>post("settings",{autonomy:b.dataset.v}));
+$("runBtn").onclick=()=>post("settings",{paused:!S.settings.paused});
+</script></body></html>
